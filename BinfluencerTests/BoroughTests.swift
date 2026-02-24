@@ -1,5 +1,5 @@
 import XCTest
-@testable import Bindicator
+@testable import Binfluencer
 
 final class BoroughTests: XCTestCase {
     func testAllBoroughsHaveDisplayNames() {

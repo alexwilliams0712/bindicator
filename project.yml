@@ -1,4 +1,4 @@
-name: Bindicator
+name: Binfluencer
 options:
   bundleIdPrefix: com.alexwilliams
   deploymentTarget:
@@ -13,18 +13,18 @@ settings:
     CODE_SIGN_IDENTITY: "Apple Development"
 
 targets:
-  Bindicator:
+  Binfluencer:
     type: application
     platform: iOS
     sources:
-      - Bindicator
+      - Binfluencer
       - Shared
     attributes:
       ProvisioningStyle: Automatic
       DevelopmentTeam: PJKF44SS8H
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.alexwilliams.Bindicator
+        PRODUCT_BUNDLE_IDENTIFIER: com.alexwilliams.Binfluencer
         DEVELOPMENT_TEAM: PJKF44SS8H
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: "Apple Development"
@@ -32,13 +32,13 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: true
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: false
-        INFOPLIST_KEY_CFBundleDisplayName: Bindicator
+        INFOPLIST_KEY_CFBundleDisplayName: Binfluencer
         INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.utilities"
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: true
         INFOPLIST_KEY_UILaunchScreen_Generation: true
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait"
-        CODE_SIGN_ENTITLEMENTS: Bindicator/Bindicator.entitlements
+        CODE_SIGN_ENTITLEMENTS: Binfluencer/Binfluencer.entitlements
     dependencies:
       - target: BinWidgetExtension
 
@@ -56,7 +56,7 @@ targets:
       DevelopmentTeam: PJKF44SS8H
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.alexwilliams.Bindicator.Widget
+        PRODUCT_BUNDLE_IDENTIFIER: com.alexwilliams.Binfluencer.BinWidget
         DEVELOPMENT_TEAM: PJKF44SS8H
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: "Apple Development"
@@ -65,34 +65,34 @@ targets:
         GENERATE_INFOPLIST_FILE: true
         INFOPLIST_FILE: BinWidget/Info.plist
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: false
-        INFOPLIST_KEY_CFBundleDisplayName: Bindicator Widget
+        INFOPLIST_KEY_CFBundleDisplayName: Binfluencer Widget
         INFOPLIST_KEY_NSHumanReadableCopyright: ""
         CODE_SIGN_ENTITLEMENTS: BinWidget/BinWidgetExtension.entitlements
 
-  BindicatorTests:
+  BinfluencerTests:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - BindicatorTests
+      - BinfluencerTests
     dependencies:
-      - target: Bindicator
+      - target: Binfluencer
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.alexwilliams.BindicatorTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.alexwilliams.BinfluencerTests
         DEVELOPMENT_TEAM: PJKF44SS8H
         GENERATE_INFOPLIST_FILE: true
 
 schemes:
-  Bindicator:
+  Binfluencer:
     build:
       targets:
-        Bindicator: all
+        Binfluencer: all
         BinWidgetExtension: all
     run:
       config: Debug
     test:
       config: Debug
       targets:
-        - BindicatorTests
+        - BinfluencerTests
     archive:
       config: Release

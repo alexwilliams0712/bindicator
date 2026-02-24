@@ -3,8 +3,6 @@ import SwiftUI
 import WidgetKit
 
 final class BinStore: ObservableObject {
-    static let appGroupId = "group.com.alexwilliams.Bindicator"
-    private static let defaults = UserDefaults(suiteName: appGroupId)
     private static let boroughKey = "selectedBorough"
     private static let postcodeKey = "selectedPostcode"
     private static let uprnKey = "selectedUPRN"
@@ -15,30 +13,30 @@ final class BinStore: ObservableObject {
     @Published var selectedBorough: Borough? {
         didSet {
             guard let borough = selectedBorough else {
-                Self.defaults?.removeObject(forKey: Self.boroughKey)
+                KeychainStore.remove(forKey: Self.boroughKey)
                 return
             }
-            Self.defaults?.set(borough.rawValue, forKey: Self.boroughKey)
+            KeychainStore.set(borough.rawValue, forKey: Self.boroughKey)
             WidgetCenter.shared.reloadAllTimelines()
         }
     }
 
     @Published var postcode: String {
-        didSet { Self.defaults?.set(postcode, forKey: Self.postcodeKey) }
+        didSet { KeychainStore.set(postcode, forKey: Self.postcodeKey) }
     }
 
     @Published var uprn: String {
-        didSet { Self.defaults?.set(uprn, forKey: Self.uprnKey) }
+        didSet { KeychainStore.set(uprn, forKey: Self.uprnKey) }
     }
 
     @Published var houseNumber: String {
-        didSet { Self.defaults?.set(houseNumber, forKey: Self.houseNumberKey) }
+        didSet { KeychainStore.set(houseNumber, forKey: Self.houseNumberKey) }
     }
 
     @Published var collections: [BinCollection] = [] {
         didSet {
             if let data = try? JSONEncoder().encode(collections) {
-                Self.defaults?.set(data, forKey: Self.collectionsKey)
+                KeychainStore.setData(data, forKey: Self.collectionsKey)
             }
             WidgetCenter.shared.reloadAllTimelines()
         }
@@ -58,37 +56,37 @@ final class BinStore: ObservableObject {
     init() {
         self.selectedBorough = Self.loadBorough()
         self.postcode = Self.loadPostcode() ?? ""
-        self.uprn = Self.defaults?.string(forKey: Self.uprnKey) ?? ""
-        self.houseNumber = Self.defaults?.string(forKey: Self.houseNumberKey) ?? ""
+        self.uprn = KeychainStore.get(forKey: Self.uprnKey) ?? ""
+        self.houseNumber = KeychainStore.get(forKey: Self.houseNumberKey) ?? ""
         self.collections = Self.loadCollections() ?? []
     }
 
     // MARK: - Static loaders (for widget)
 
     static func loadBorough() -> Borough? {
-        guard let raw = defaults?.string(forKey: boroughKey) else { return nil }
+        guard let raw = KeychainStore.get(forKey: boroughKey) else { return nil }
         return Borough(rawValue: raw)
     }
 
     static func loadPostcode() -> String? {
-        defaults?.string(forKey: postcodeKey)
+        KeychainStore.get(forKey: postcodeKey)
     }
 
     static func loadUPRN() -> String? {
-        defaults?.string(forKey: uprnKey)
+        KeychainStore.get(forKey: uprnKey)
     }
 
     static func loadHouseNumber() -> String? {
-        defaults?.string(forKey: houseNumberKey)
+        KeychainStore.get(forKey: houseNumberKey)
     }
 
     static func loadCollections() -> [BinCollection]? {
-        guard let data = defaults?.data(forKey: collectionsKey) else { return nil }
+        guard let data = KeychainStore.getData(forKey: collectionsKey) else { return nil }
         return try? JSONDecoder().decode([BinCollection].self, from: data)
     }
 
     func updateLastFetch() {
-        Self.defaults?.set(Date(), forKey: Self.lastFetchKey)
+        KeychainStore.set(ISO8601DateFormatter().string(from: Date()), forKey: Self.lastFetchKey)
     }
 
     func clearAll() {

@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct BindicatorApp: App {
+struct BinfluencerApp: App {
     @StateObject private var binStore = BinStore()
 
     var body: some Scene {

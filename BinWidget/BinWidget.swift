@@ -1,7 +1,7 @@
 import SwiftUI
 import WidgetKit
 
-struct BindicatorProvider: TimelineProvider {
+struct BinfluencerProvider: TimelineProvider {
     func placeholder(in context: Context) -> BinEntry_Widget {
         .placeholder
     }
@@ -78,19 +78,19 @@ struct BindicatorProvider: TimelineProvider {
     }
 }
 
-struct BindicatorWidget: Widget {
-    let kind = "BindicatorWidget"
+struct BinfluencerWidget: Widget {
+    let kind = "BinfluencerWidget"
 
     private var supportedFamilies: [WidgetFamily] {
         [.systemSmall, .systemMedium, .accessoryRectangular, .accessoryCircular]
     }
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: BindicatorProvider()) { entry in
+        StaticConfiguration(kind: kind, provider: BinfluencerProvider()) { entry in
             BinWidgetEntryView(entry: entry)
                 .containerBackground(.fill.tertiary, for: .widget)
         }
-        .configurationDisplayName("Bindicator")
+        .configurationDisplayName("Binfluencer")
         .description("Your upcoming bin collection days")
         .supportedFamilies(supportedFamilies)
     }

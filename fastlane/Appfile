@@ -1,0 +1,3 @@
+app_identifier("com.alexwilliams.Binfluencer")
+apple_id(ENV["APPLE_ID"] || "alexwilliams0712@hotmail.com")
+team_id(ENV["TEAM_ID"] || "PJKF44SS8H")

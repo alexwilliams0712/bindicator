@@ -4,9 +4,9 @@
 <dict>
 	<key>com.apple.security.app-sandbox</key>
 	<true/>
-	<key>com.apple.security.application-groups</key>
+	<key>keychain-access-groups</key>
 	<array>
-		<string>group.com.alexwilliams.Bindicator</string>
+		<string>$(AppIdentifierPrefix)com.alexwilliams.Binfluencer.shared</string>
 	</array>
 	<key>com.apple.security.network.client</key>
 	<true/>

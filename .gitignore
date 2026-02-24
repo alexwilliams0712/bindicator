@@ -43,3 +43,9 @@ dist/
 .DS_Store
 *.swp
 *~
+fastlane/keys/
+fastlane/report.xml
+fastlane/README.md
+*.ipa
+*.dSYM.zip
+*.mobileprovision

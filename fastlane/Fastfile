@@ -1,0 +1,115 @@
+default_platform(:ios)
+
+XCODEPROJ = "Binfluencer.xcodeproj"
+SCHEME = "Binfluencer"
+APP_IDENTIFIER = "com.alexwilliams.Binfluencer"
+WIDGET_IDENTIFIER = "com.alexwilliams.Binfluencer.BinWidget"
+
+API_KEY_PATH = File.expand_path("keys/AuthKey_MM7932226L.p8", __dir__)
+
+before_all do
+  setup_ci if ENV["CI"]
+  app_store_connect_api_key(
+    key_id: "MM7932226L",
+    issuer_id: "1586ce5f-fb08-415e-a8d9-e9d918211923",
+    key_filepath: API_KEY_PATH
+  )
+end
+
+platform :ios do
+  desc "Register App IDs and capabilities via App Store Connect API"
+  lane :register do
+    require 'spaceship'
+
+    token = Spaceship::ConnectAPI::Token.create(
+      key_id: "MM7932226L",
+      issuer_id: "1586ce5f-fb08-415e-a8d9-e9d918211923",
+      filepath: API_KEY_PATH
+    )
+    Spaceship::ConnectAPI.token = token
+
+    bundle_id = Spaceship::ConnectAPI::BundleId.find(APP_IDENTIFIER)
+    unless bundle_id
+      bundle_id = Spaceship::ConnectAPI::BundleId.create(
+        name: "Binfluencer",
+        identifier: APP_IDENTIFIER,
+        platform: Spaceship::ConnectAPI::BundleIdPlatform::IOS
+      )
+      UI.success("Created App ID #{APP_IDENTIFIER}")
+    end
+
+    widget_bundle_id = Spaceship::ConnectAPI::BundleId.find(WIDGET_IDENTIFIER)
+    unless widget_bundle_id
+      widget_bundle_id = Spaceship::ConnectAPI::BundleId.create(
+        name: "Binfluencer BinWidget",
+        identifier: WIDGET_IDENTIFIER,
+        platform: Spaceship::ConnectAPI::BundleIdPlatform::IOS
+      )
+      UI.success("Created App ID #{WIDGET_IDENTIFIER}")
+    end
+  end
+
+  desc "Sync signing certificates and profiles"
+  lane :sync_certs do
+    match(
+      type: "appstore",
+      app_identifier: [APP_IDENTIFIER, WIDGET_IDENTIFIER],
+      readonly: is_ci
+    )
+  end
+
+  desc "Build and upload iOS to TestFlight"
+  lane :beta do
+    sync_certs
+
+    # Generate Xcode project
+    sh("cd .. && /opt/homebrew/bin/xcodegen generate || xcodegen generate")
+
+    # Use build number from TestFlight if app exists, otherwise start at 1
+    build_number = 1
+    begin
+      build_number = latest_testflight_build_number + 1
+    rescue => e
+      UI.message("No existing TestFlight builds found, starting at 1")
+    end
+
+    increment_build_number(
+      build_number: build_number,
+      xcodeproj: XCODEPROJ
+    )
+
+    update_code_signing_settings(
+      path: XCODEPROJ,
+      use_automatic_signing: false,
+      team_id: "PJKF44SS8H",
+      code_sign_identity: "Apple Distribution",
+      targets: ["Binfluencer"],
+      profile_name: "match AppStore #{APP_IDENTIFIER}"
+    )
+    update_code_signing_settings(
+      path: XCODEPROJ,
+      use_automatic_signing: false,
+      team_id: "PJKF44SS8H",
+      code_sign_identity: "Apple Distribution",
+      targets: ["BinWidgetExtension"],
+      profile_name: "match AppStore #{WIDGET_IDENTIFIER}"
+    )
+
+    build_app(
+      project: XCODEPROJ,
+      scheme: SCHEME,
+      destination: "generic/platform=iOS",
+      export_method: "app-store",
+      export_options: {
+        provisioningProfiles: {
+          APP_IDENTIFIER => "match AppStore #{APP_IDENTIFIER}",
+          WIDGET_IDENTIFIER => "match AppStore #{WIDGET_IDENTIFIER}"
+        }
+      }
+    )
+
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true
+    )
+  end
+end

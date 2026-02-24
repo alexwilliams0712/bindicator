@@ -1,0 +1,6 @@
+git_url(ENV["MATCH_GIT_URL"] || "https://github.com/alexwilliams0712/certificates")
+storage_mode("git")
+type("appstore")
+app_identifier(["com.alexwilliams.Binfluencer", "com.alexwilliams.Binfluencer.BinWidget"])
+username(ENV["APPLE_ID"] || "alexwilliams0712@hotmail.com")
+team_id(ENV["TEAM_ID"] || "PJKF44SS8H")
