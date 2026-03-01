@@ -32,7 +32,7 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: true
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: false
-        INFOPLIST_KEY_CFBundleDisplayName: Bindicator
+        INFOPLIST_KEY_CFBundleDisplayName: London Bindicator
         INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.utilities"
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: true
@@ -66,7 +66,7 @@ targets:
         GENERATE_INFOPLIST_FILE: true
         INFOPLIST_FILE: BinWidget/Info.plist
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: false
-        INFOPLIST_KEY_CFBundleDisplayName: Bindicator Widget
+        INFOPLIST_KEY_CFBundleDisplayName: London Bindicator Widget
         INFOPLIST_KEY_NSHumanReadableCopyright: ""
         CODE_SIGN_ENTITLEMENTS: BinWidget/BinWidgetExtension.entitlements
 
