@@ -32,7 +32,7 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: true
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: false
-        INFOPLIST_KEY_CFBundleDisplayName: Binfluencer
+        INFOPLIST_KEY_CFBundleDisplayName: Bindicator
         INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.utilities"
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: true
@@ -66,7 +66,7 @@ targets:
         GENERATE_INFOPLIST_FILE: true
         INFOPLIST_FILE: BinWidget/Info.plist
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: false
-        INFOPLIST_KEY_CFBundleDisplayName: Binfluencer Widget
+        INFOPLIST_KEY_CFBundleDisplayName: Bindicator Widget
         INFOPLIST_KEY_NSHumanReadableCopyright: ""
         CODE_SIGN_ENTITLEMENTS: BinWidget/BinWidgetExtension.entitlements
 
@@ -83,6 +83,19 @@ targets:
         DEVELOPMENT_TEAM: PJKF44SS8H
         GENERATE_INFOPLIST_FILE: true
 
+  BinfluencerUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - BinfluencerUITests
+    dependencies:
+      - target: Binfluencer
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.alexwilliams.BinfluencerUITests
+        DEVELOPMENT_TEAM: PJKF44SS8H
+        GENERATE_INFOPLIST_FILE: true
+
 schemes:
   Binfluencer:
     build:
@@ -95,5 +108,6 @@ schemes:
       config: Debug
       targets:
         - BinfluencerTests
+        - BinfluencerUITests
     archive:
       config: Release

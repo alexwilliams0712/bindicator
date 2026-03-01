@@ -31,7 +31,7 @@ platform :ios do
     bundle_id = Spaceship::ConnectAPI::BundleId.find(APP_IDENTIFIER)
     unless bundle_id
       bundle_id = Spaceship::ConnectAPI::BundleId.create(
-        name: "Binfluencer",
+        name: "Bindicator",
         identifier: APP_IDENTIFIER,
         platform: Spaceship::ConnectAPI::BundleIdPlatform::IOS
       )
@@ -41,7 +41,7 @@ platform :ios do
     widget_bundle_id = Spaceship::ConnectAPI::BundleId.find(WIDGET_IDENTIFIER)
     unless widget_bundle_id
       widget_bundle_id = Spaceship::ConnectAPI::BundleId.create(
-        name: "Binfluencer BinWidget",
+        name: "Bindicator BinWidget",
         identifier: WIDGET_IDENTIFIER,
         platform: Spaceship::ConnectAPI::BundleIdPlatform::IOS
       )

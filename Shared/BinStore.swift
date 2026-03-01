@@ -45,9 +45,10 @@ final class BinStore: ObservableObject {
     var isConfigured: Bool {
         guard let borough = selectedBorough else { return false }
         switch borough.inputRequirement {
-        case .uprn: return !uprn.isEmpty
-        case .postcodeAndUPRN: return !postcode.isEmpty && !uprn.isEmpty
-        case .postcodeAndNumber: return !postcode.isEmpty
+        case .postcodeAndAddressSelect:
+            return !postcode.isEmpty && !uprn.isEmpty
+        case .postcodeAndNumber:
+            return !postcode.isEmpty
         }
     }
 

@@ -90,7 +90,7 @@ struct BinfluencerWidget: Widget {
             BinWidgetEntryView(entry: entry)
                 .containerBackground(.fill.tertiary, for: .widget)
         }
-        .configurationDisplayName("Binfluencer")
+        .configurationDisplayName("Bindicator")
         .description("Your upcoming bin collection days")
         .supportedFamilies(supportedFamilies)
     }

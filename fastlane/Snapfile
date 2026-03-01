@@ -1,0 +1,41 @@
+# Snapfile - App Store screenshot configuration
+
+# Devices to screenshot
+devices([
+  "iPhone 17 Pro Max",
+  "iPhone 17 Pro",
+  "iPhone Air",
+  "iPhone 16e",
+  "iPad Pro 13-inch (M5)",
+  "iPad Air 13-inch (M3)"
+])
+
+# Languages (English only for now)
+languages([
+  "en-US"
+])
+
+# Xcode project settings
+project("Binfluencer.xcodeproj")
+scheme("Binfluencer")
+
+# Output directory
+output_directory("./fastlane/screenshots")
+
+# Clear previous screenshots
+clear_previous_screenshots(true)
+
+# Use the UI test target
+launch_arguments(["-UITests"])
+
+# iOS version
+ios_version("26.2")
+
+# Override status bar (clean look for screenshots)
+override_status_bar(true)
+
+# Stop after first error
+stop_after_first_error(false)
+
+# Number of retries
+number_of_retries(1)

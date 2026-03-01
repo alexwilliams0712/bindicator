@@ -58,18 +58,20 @@ enum Borough: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// What input this borough's API needs
+    /// What input this borough's API needs from the user.
+    /// All boroughs now use postcode-based input - no manual UPRN entry required.
     var inputRequirement: BoroughInputRequirement {
         switch self {
         case .brent, .greenwich, .hackney:
+            // These councils accept postcode + house number directly
             return .postcodeAndNumber
-        case .islington:
-            return .postcodeAndUPRN
         case .ealing, .haringey, .harrow, .havering, .hounslow, .lambeth,
-             .camden, .merton, .newham, .southwark, .sutton, .wandsworth:
-            return .uprn
+             .camden, .islington, .merton, .newham, .southwark, .sutton, .wandsworth:
+            // These councils need a UPRN internally, but we resolve it
+            // automatically via address lookup from the user's postcode
+            return .postcodeAndAddressSelect
         default:
-            return .uprn
+            return .postcodeAndAddressSelect
         }
     }
 
@@ -83,11 +85,10 @@ enum Borough: String, Codable, CaseIterable, Identifiable {
 }
 
 enum BoroughInputRequirement: String, Codable {
-    case uprn               // Needs UPRN only
-    case postcodeAndUPRN    // Needs postcode + UPRN
-    case postcodeAndNumber  // Needs postcode + house number
+    case postcodeAndAddressSelect  // Enter postcode, pick address from list (resolves UPRN automatically)
+    case postcodeAndNumber         // Enter postcode + house number directly
 
-    var needsPostcode: Bool { self != .uprn }
-    var needsUPRN: Bool { self == .uprn || self == .postcodeAndUPRN }
+    var needsPostcode: Bool { true }
+    var needsAddressSelection: Bool { self == .postcodeAndAddressSelect }
     var needsHouseNumber: Bool { self == .postcodeAndNumber }
 }

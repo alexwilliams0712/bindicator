@@ -68,16 +68,22 @@ final class BoroughTests: XCTestCase {
     }
 
     func testInputRequirements() {
-        // UPRN-only boroughs
-        XCTAssertEqual(Borough.harrow.inputRequirement, .uprn)
-        XCTAssertEqual(Borough.ealing.inputRequirement, .uprn)
-        XCTAssertEqual(Borough.lambeth.inputRequirement, .uprn)
-        XCTAssertEqual(Borough.camden.inputRequirement, .uprn)
+        // Boroughs that resolve UPRN automatically via address lookup
+        XCTAssertEqual(Borough.harrow.inputRequirement, .postcodeAndAddressSelect)
+        XCTAssertEqual(Borough.ealing.inputRequirement, .postcodeAndAddressSelect)
+        XCTAssertEqual(Borough.lambeth.inputRequirement, .postcodeAndAddressSelect)
+        XCTAssertEqual(Borough.camden.inputRequirement, .postcodeAndAddressSelect)
+        XCTAssertEqual(Borough.islington.inputRequirement, .postcodeAndAddressSelect)
+        XCTAssertEqual(Borough.haringey.inputRequirement, .postcodeAndAddressSelect)
+        XCTAssertEqual(Borough.havering.inputRequirement, .postcodeAndAddressSelect)
+        XCTAssertEqual(Borough.hounslow.inputRequirement, .postcodeAndAddressSelect)
+        XCTAssertEqual(Borough.merton.inputRequirement, .postcodeAndAddressSelect)
+        XCTAssertEqual(Borough.newham.inputRequirement, .postcodeAndAddressSelect)
+        XCTAssertEqual(Borough.southwark.inputRequirement, .postcodeAndAddressSelect)
+        XCTAssertEqual(Borough.sutton.inputRequirement, .postcodeAndAddressSelect)
+        XCTAssertEqual(Borough.wandsworth.inputRequirement, .postcodeAndAddressSelect)
 
-        // Postcode + UPRN boroughs
-        XCTAssertEqual(Borough.islington.inputRequirement, .postcodeAndUPRN)
-
-        // Postcode + house number boroughs
+        // Boroughs that use postcode + house number directly
         XCTAssertEqual(Borough.brent.inputRequirement, .postcodeAndNumber)
         XCTAssertEqual(Borough.greenwich.inputRequirement, .postcodeAndNumber)
         XCTAssertEqual(Borough.hackney.inputRequirement, .postcodeAndNumber)

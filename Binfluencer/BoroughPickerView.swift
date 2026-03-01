@@ -5,16 +5,22 @@ struct BoroughPickerView: View {
     @Environment(\.dismiss) var dismiss
     @State private var selectedBorough: Borough?
     @State private var postcode: String = ""
-    @State private var uprn: String = ""
     @State private var houseNumber: String = ""
     @State private var isSaving = false
+
+    // Address lookup state
+    @State private var isLoadingAddresses = false
+    @State private var addresses: [Address] = []
+    @State private var selectedAddress: Address?
+    @State private var addressLookupError: String?
 
     private var canSave: Bool {
         guard let borough = selectedBorough, borough.isSupported else { return false }
         switch borough.inputRequirement {
-        case .uprn: return !uprn.isEmpty
-        case .postcodeAndUPRN: return !postcode.isEmpty && !uprn.isEmpty
-        case .postcodeAndNumber: return !postcode.isEmpty
+        case .postcodeAndAddressSelect:
+            return !postcode.isEmpty && selectedAddress != nil
+        case .postcodeAndNumber:
+            return !postcode.isEmpty
         }
     }
 
@@ -28,12 +34,12 @@ struct BoroughPickerView: View {
                         boroughSection
 
                         if let borough = selectedBorough, borough.isSupported {
-                            if borough.inputRequirement.needsPostcode {
-                                postcodeSection
+                            postcodeSection
+
+                            if borough.inputRequirement.needsAddressSelection {
+                                addressLookupSection
                             }
-                            if borough.inputRequirement.needsUPRN {
-                                uprnSection
-                            }
+
                             if borough.inputRequirement.needsHouseNumber {
                                 houseNumberSection
                             }
@@ -55,8 +61,17 @@ struct BoroughPickerView: View {
         .task {
             selectedBorough = binStore.selectedBorough
             postcode = binStore.postcode
-            uprn = binStore.uprn
             houseNumber = binStore.houseNumber
+            // If there's a stored UPRN, try to pre-select it
+            if !binStore.uprn.isEmpty {
+                selectedAddress = Address(uprn: binStore.uprn, address: "Previously saved address")
+            }
+        }
+        .onChange(of: selectedBorough) { _, _ in
+            // Reset address lookup when borough changes
+            addresses = []
+            selectedAddress = nil
+            addressLookupError = nil
         }
     }
 
@@ -127,32 +142,6 @@ struct BoroughPickerView: View {
         )
     }
 
-    private var uprnSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionLabel("UPRN")
-                .foregroundStyle(.white.opacity(0.4))
-
-            HStack {
-                Image(systemName: "number")
-                    .foregroundStyle(.green)
-                    .frame(width: 20)
-
-                TextField("e.g. 100023456789", text: $uprn)
-                    .keyboardType(.numberPad)
-                    .foregroundStyle(.white)
-            }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.white.opacity(0.06))
-            )
-
-            Text("Your UPRN is a 12-digit number. Find it at FindMyAddress.co.uk")
-                .font(.caption2)
-                .foregroundStyle(.white.opacity(0.25))
-        }
-    }
-
     private var houseNumberSection: some View {
         inputSection(
             label: "HOUSE NUMBER / NAME",
@@ -162,6 +151,109 @@ struct BoroughPickerView: View {
             contentType: .streetAddressLine1,
             capitalization: .words
         )
+    }
+
+    // MARK: - Address Lookup Section
+
+    private var addressLookupSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionLabel("YOUR ADDRESS")
+                .foregroundStyle(.white.opacity(0.4))
+
+            // Find Address button
+            Button {
+                Task { await findAddresses() }
+            } label: {
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.green)
+                        .frame(width: 20)
+
+                    if isLoadingAddresses {
+                        ProgressView()
+                            .tint(.white)
+                            .scaleEffect(0.8)
+                        Text("Searching...")
+                            .foregroundStyle(.white.opacity(0.5))
+                    } else {
+                        Text("Find my address")
+                            .foregroundStyle(.white)
+                    }
+
+                    Spacer()
+                }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.white.opacity(0.06))
+                )
+            }
+            .disabled(postcode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoadingAddresses)
+
+            // Error message
+            if let error = addressLookupError {
+                Text(error)
+                    .font(.caption2)
+                    .foregroundStyle(.orange.opacity(0.7))
+            }
+
+            // Address picker (shown after lookup)
+            if !addresses.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("\(addresses.count) address\(addresses.count == 1 ? "" : "es") found")
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.25))
+
+                    HStack {
+                        Image(systemName: "house")
+                            .foregroundStyle(.green)
+                            .frame(width: 20)
+
+                        Menu {
+                            ForEach(addresses) { address in
+                                Button(address.address) {
+                                    withAnimation { selectedAddress = address }
+                                }
+                            }
+                        } label: {
+                            if let address = selectedAddress, address.address != "Previously saved address" {
+                                Text(address.address)
+                                    .foregroundStyle(.white)
+                                    .lineLimit(2)
+                                    .multilineTextAlignment(.leading)
+                            } else {
+                                Text("Select your address")
+                                    .foregroundStyle(.white.opacity(0.4))
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.up.chevron.down")
+                                .foregroundStyle(.white.opacity(0.3))
+                                .font(.caption)
+                        }
+                    }
+                    .padding(16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(selectedAddress != nil
+                                  ? Color.green.opacity(0.08)
+                                  : Color.white.opacity(0.06))
+                    )
+                }
+            }
+
+            // Selected address confirmation
+            if let address = selectedAddress, address.address != "Previously saved address" {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                        .font(.caption)
+                    Text(address.address)
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.5))
+                        .lineLimit(2)
+                }
+            }
+        }
     }
 
     private func inputSection(
@@ -202,8 +294,8 @@ struct BoroughPickerView: View {
             sectionLabel("HELP")
                 .foregroundStyle(.white.opacity(0.4))
 
-            if selectedBorough?.inputRequirement.needsUPRN == true {
-                Text("Your UPRN (Unique Property Reference Number) identifies your specific address. You can find it by searching for your address at FindMyAddress.co.uk or on your council tax bill.")
+            if selectedBorough?.inputRequirement.needsAddressSelection == true {
+                Text("Enter your postcode and tap \"Find my address\" to see a list of addresses. Select yours to set up your bin collection schedule.")
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.25))
             } else {
@@ -251,13 +343,50 @@ struct BoroughPickerView: View {
             .tracking(1.5)
     }
 
+    private func findAddresses() async {
+        guard let borough = selectedBorough else { return }
+        let cleanPostcode = postcode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard !cleanPostcode.isEmpty else { return }
+
+        isLoadingAddresses = true
+        addressLookupError = nil
+        addresses = []
+        selectedAddress = nil
+
+        do {
+            let results = try await AddressLookupService.shared.lookupAddresses(
+                postcode: cleanPostcode,
+                borough: borough
+            )
+            addresses = results
+            if results.isEmpty {
+                addressLookupError = "No addresses found for this postcode. Check the postcode and try again."
+            } else if results.count == 1 {
+                // Auto-select if there's only one result
+                selectedAddress = results.first
+            }
+        } catch {
+            addressLookupError = "Could not look up addresses: \(error.localizedDescription)"
+        }
+
+        isLoadingAddresses = false
+    }
+
     private func save() {
         guard let borough = selectedBorough else { return }
         isSaving = true
+
         binStore.selectedBorough = borough
         binStore.postcode = postcode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        binStore.uprn = uprn.trimmingCharacters(in: .whitespacesAndNewlines)
         binStore.houseNumber = houseNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Store the UPRN from the selected address (for boroughs that need it)
+        if let address = selectedAddress {
+            binStore.uprn = address.uprn
+        } else {
+            binStore.uprn = ""
+        }
+
         isSaving = false
         dismiss()
     }
