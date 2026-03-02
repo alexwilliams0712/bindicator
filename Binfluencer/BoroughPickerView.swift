@@ -3,10 +3,14 @@ import SwiftUI
 struct BoroughPickerView: View {
     @EnvironmentObject var binStore: BinStore
     @Environment(\.dismiss) var dismiss
-    @State private var selectedBorough: Borough?
     @State private var postcode: String = ""
     @State private var houseNumber: String = ""
     @State private var isSaving = false
+
+    // Borough detection state
+    @State private var detectedBorough: Borough?
+    @State private var isDetectingBorough = false
+    @State private var boroughError: String?
 
     // Address lookup state
     @State private var isLoadingAddresses = false
@@ -14,8 +18,15 @@ struct BoroughPickerView: View {
     @State private var selectedAddress: Address?
     @State private var addressLookupError: String?
 
+    private var postcodeIsValid: Bool {
+        let trimmed = postcode.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 5 else { return false }
+        let pattern = #"^[A-Za-z]{1,2}\d[A-Za-z\d]?\s*\d[A-Za-z]{2}$"#
+        return trimmed.range(of: pattern, options: .regularExpression) != nil
+    }
+
     private var canSave: Bool {
-        guard let borough = selectedBorough, borough.isSupported else { return false }
+        guard let borough = detectedBorough, borough.isSupported else { return false }
         switch borough.inputRequirement {
         case .postcodeAndAddressSelect:
             return !postcode.isEmpty && selectedAddress != nil
@@ -31,10 +42,19 @@ struct BoroughPickerView: View {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(spacing: 28) {
-                        boroughSection
+                        postcodeSection
 
-                        if let borough = selectedBorough, borough.isSupported {
-                            postcodeSection
+                        if postcodeIsValid {
+                            lookupButton
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
+
+                        if let error = boroughError {
+                            boroughErrorSection(error)
+                        }
+
+                        if let borough = detectedBorough {
+                            boroughInfoSection(borough)
 
                             if borough.inputRequirement.needsAddressSelection {
                                 addressLookupSection
@@ -50,6 +70,7 @@ struct BoroughPickerView: View {
                     .padding(.horizontal, 24)
                     .padding(.top, 24)
                     .padding(.bottom, 16)
+                    .animation(.easeInOut(duration: 0.3), value: postcodeIsValid)
                 }
 
                 saveButton
@@ -59,98 +80,151 @@ struct BoroughPickerView: View {
         .toolbarBackground(.black, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .task {
-            selectedBorough = binStore.selectedBorough
+            detectedBorough = binStore.selectedBorough
             postcode = binStore.postcode
             houseNumber = binStore.houseNumber
-            // If there's a stored UPRN, try to pre-select it
             if !binStore.uprn.isEmpty {
                 selectedAddress = Address(uprn: binStore.uprn, address: "Previously saved address")
             }
         }
-        .onChange(of: selectedBorough) { _, _ in
-            // Reset address lookup when borough changes
-            addresses = []
-            selectedAddress = nil
-            addressLookupError = nil
-        }
     }
 
-    // MARK: - Borough Section
+    // MARK: - Postcode Section
 
-    private var boroughSection: some View {
+    private var postcodeSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionLabel("BOROUGH")
+            sectionLabel("POSTCODE")
                 .foregroundStyle(.white.opacity(0.4))
 
             HStack {
-                Image(systemName: "building.2")
+                Image(systemName: "mappin")
                     .foregroundStyle(.green)
                     .frame(width: 20)
 
-                Menu {
-                    Section("Supported") {
-                        ForEach(Borough.supported) { borough in
-                            Button(borough.displayName) {
-                                withAnimation { selectedBorough = borough }
-                            }
-                        }
+                TextField("e.g. N1 2AB", text: $postcode)
+                    .textContentType(.postalCode)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                    .foregroundStyle(.white)
+                    .onSubmit { Task { await detectBorough() } }
+                    .onChange(of: postcode) { _, _ in
+                        // Reset detected borough when postcode changes
+                        detectedBorough = nil
+                        boroughError = nil
+                        addresses = []
+                        selectedAddress = nil
+                        addressLookupError = nil
                     }
-                    Section("Coming Soon") {
-                        ForEach(Borough.unsupported) { borough in
-                            Button(borough.displayName) {}
-                                .disabled(true)
-                        }
-                    }
-                } label: {
-                    if let borough = selectedBorough {
-                        Text(borough.displayName)
-                            .foregroundStyle(.white)
-                    } else {
-                        Text("Select a borough")
-                            .foregroundStyle(.white.opacity(0.4))
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.up.chevron.down")
-                        .foregroundStyle(.white.opacity(0.3))
-                        .font(.caption)
-                }
             }
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color.white.opacity(0.06))
             )
-
-            if let borough = selectedBorough, !borough.isSupported {
-                Text("\(borough.displayName) requires browser automation and is not yet supported in the app.")
-                    .font(.caption2)
-                    .foregroundStyle(.orange.opacity(0.7))
-            }
         }
     }
 
-    // MARK: - Input Sections
+    // MARK: - Lookup Button
 
-    private var postcodeSection: some View {
-        inputSection(
-            label: "POSTCODE",
-            icon: "mappin",
-            placeholder: "e.g. N1 2AB",
-            text: $postcode,
-            contentType: .postalCode,
-            capitalization: .characters
+    private var lookupButton: some View {
+        Button {
+            Task { await detectBorough() }
+        } label: {
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.green)
+                    .frame(width: 20)
+
+                if isDetectingBorough {
+                    ProgressView()
+                        .tint(.white)
+                        .scaleEffect(0.8)
+                    Text("Looking up postcode...")
+                        .foregroundStyle(.white.opacity(0.5))
+                } else {
+                    Text("Find my address")
+                        .foregroundStyle(.white)
+                }
+
+                Spacer()
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.white.opacity(0.06))
+            )
+        }
+        .disabled(postcode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isDetectingBorough)
+    }
+
+    // MARK: - Borough Error
+
+    private func boroughErrorSection(_ error: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+                .font(.caption)
+            Text(error)
+                .font(.caption2)
+                .foregroundStyle(.orange.opacity(0.7))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - Borough Info
+
+    private func boroughInfoSection(_ borough: Borough) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "building.2")
+                .foregroundStyle(.green)
+                .frame(width: 20)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("BOROUGH")
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .tracking(1)
+                    .foregroundStyle(.white.opacity(0.3))
+                Text(borough.displayName)
+                    .foregroundStyle(.white)
+            }
+
+            Spacer()
+
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.green.opacity(0.08))
         )
     }
 
+    // MARK: - House Number Section
+
     private var houseNumberSection: some View {
-        inputSection(
-            label: "HOUSE NUMBER / NAME",
-            icon: "house",
-            placeholder: "e.g. 42 or Flat 3",
-            text: $houseNumber,
-            contentType: .streetAddressLine1,
-            capitalization: .words
-        )
+        VStack(alignment: .leading, spacing: 10) {
+            sectionLabel("HOUSE NUMBER / NAME")
+                .foregroundStyle(.white.opacity(0.4))
+
+            HStack {
+                Image(systemName: "house")
+                    .foregroundStyle(.green)
+                    .frame(width: 20)
+
+                TextField("e.g. 42 or Flat 3", text: $houseNumber)
+                    .textContentType(.streetAddressLine1)
+                    .textInputAutocapitalization(.words)
+                    .autocorrectionDisabled()
+                    .foregroundStyle(.white)
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.white.opacity(0.06))
+            )
+        }
     }
 
     // MARK: - Address Lookup Section
@@ -160,35 +234,22 @@ struct BoroughPickerView: View {
             sectionLabel("YOUR ADDRESS")
                 .foregroundStyle(.white.opacity(0.4))
 
-            // Find Address button
-            Button {
-                Task { await findAddresses() }
-            } label: {
+            // Loading indicator while fetching addresses
+            if isLoadingAddresses {
                 HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.green)
-                        .frame(width: 20)
-
-                    if isLoadingAddresses {
-                        ProgressView()
-                            .tint(.white)
-                            .scaleEffect(0.8)
-                        Text("Searching...")
-                            .foregroundStyle(.white.opacity(0.5))
-                    } else {
-                        Text("Find my address")
-                            .foregroundStyle(.white)
-                    }
-
-                    Spacer()
+                    ProgressView()
+                        .tint(.white)
+                        .scaleEffect(0.8)
+                    Text("Searching addresses...")
+                        .foregroundStyle(.white.opacity(0.5))
                 }
                 .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
                         .fill(Color.white.opacity(0.06))
                 )
             }
-            .disabled(postcode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoadingAddresses)
 
             // Error message
             if let error = addressLookupError {
@@ -256,37 +317,6 @@ struct BoroughPickerView: View {
         }
     }
 
-    private func inputSection(
-        label: String,
-        icon: String,
-        placeholder: String,
-        text: Binding<String>,
-        contentType: UITextContentType,
-        capitalization: TextInputAutocapitalization
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionLabel(label)
-                .foregroundStyle(.white.opacity(0.4))
-
-            HStack {
-                Image(systemName: icon)
-                    .foregroundStyle(.green)
-                    .frame(width: 20)
-
-                TextField(placeholder, text: text)
-                    .textContentType(contentType)
-                    .textInputAutocapitalization(capitalization)
-                    .autocorrectionDisabled()
-                    .foregroundStyle(.white)
-            }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.white.opacity(0.06))
-            )
-        }
-    }
-
     // MARK: - Help Section
 
     private var helpSection: some View {
@@ -294,12 +324,12 @@ struct BoroughPickerView: View {
             sectionLabel("HELP")
                 .foregroundStyle(.white.opacity(0.4))
 
-            if selectedBorough?.inputRequirement.needsAddressSelection == true {
-                Text("Enter your postcode and tap \"Find my address\" to see a list of addresses. Select yours to set up your bin collection schedule.")
+            if detectedBorough?.inputRequirement.needsAddressSelection == true {
+                Text("Your borough was detected automatically. Select your address from the list above to set up your bin collection schedule.")
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.25))
             } else {
-                Text("Enter your postcode and house number to look up your bin collection schedule.")
+                Text("Your borough was detected automatically. Enter your house number to look up your bin collection schedule.")
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.25))
             }
@@ -314,7 +344,7 @@ struct BoroughPickerView: View {
                 Spacer()
                 if isSaving {
                     ProgressView().tint(.white)
-                } else if let borough = selectedBorough, canSave {
+                } else if let borough = detectedBorough, canSave {
                     Text("Save \(borough.displayName)")
                 } else {
                     Text("Save")
@@ -343,26 +373,45 @@ struct BoroughPickerView: View {
             .tracking(1.5)
     }
 
-    private func findAddresses() async {
-        guard let borough = selectedBorough else { return }
+    private func detectBorough() async {
         let cleanPostcode = postcode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         guard !cleanPostcode.isEmpty else { return }
 
-        isLoadingAddresses = true
-        addressLookupError = nil
+        isDetectingBorough = true
+        boroughError = nil
+        detectedBorough = nil
         addresses = []
         selectedAddress = nil
+        addressLookupError = nil
+
+        do {
+            let borough = try await AddressLookupService.shared.lookupBorough(postcode: cleanPostcode)
+            detectedBorough = borough
+
+            // Automatically fetch addresses for boroughs that need address selection
+            if borough.inputRequirement.needsAddressSelection {
+                await findAddresses(borough: borough, postcode: cleanPostcode)
+            }
+        } catch {
+            boroughError = error.localizedDescription
+        }
+
+        isDetectingBorough = false
+    }
+
+    private func findAddresses(borough: Borough, postcode: String) async {
+        isLoadingAddresses = true
+        addressLookupError = nil
 
         do {
             let results = try await AddressLookupService.shared.lookupAddresses(
-                postcode: cleanPostcode,
+                postcode: postcode,
                 borough: borough
             )
             addresses = results
             if results.isEmpty {
                 addressLookupError = "No addresses found for this postcode. Check the postcode and try again."
             } else if results.count == 1 {
-                // Auto-select if there's only one result
                 selectedAddress = results.first
             }
         } catch {
@@ -373,14 +422,13 @@ struct BoroughPickerView: View {
     }
 
     private func save() {
-        guard let borough = selectedBorough else { return }
+        guard let borough = detectedBorough else { return }
         isSaving = true
 
         binStore.selectedBorough = borough
         binStore.postcode = postcode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         binStore.houseNumber = houseNumber.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        // Store the UPRN from the selected address (for boroughs that need it)
         if let address = selectedAddress {
             binStore.uprn = address.uprn
         } else {

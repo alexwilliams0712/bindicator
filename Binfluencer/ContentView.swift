@@ -185,11 +185,11 @@ struct ContentView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(.green.opacity(0.6))
 
-            Text("Set up your borough")
+            Text("Find your bins")
                 .font(.headline)
                 .foregroundStyle(.white.opacity(0.7))
 
-            Text("Select your London borough and enter your address details to see your bin collection schedule.")
+            Text("Enter your postcode to find your bin collection schedule.")
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.4))
                 .multilineTextAlignment(.center)

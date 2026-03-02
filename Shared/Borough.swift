@@ -82,6 +82,40 @@ enum Borough: String, Codable, CaseIterable, Identifiable {
     static var unsupported: [Borough] {
         allCases.filter { !$0.isSupported }.sorted { $0.displayName < $1.displayName }
     }
+
+    /// Attempt to match an `admin_district` string from the postcodes.io API to a Borough case.
+    /// The API typically returns names like "Ealing", "Camden", "Tower Hamlets" which match
+    /// our rawValues directly. This also handles known edge cases.
+    static func fromAdminDistrict(_ district: String) -> Borough? {
+        // Direct match by rawValue first (covers most cases)
+        if let borough = Borough(rawValue: district) {
+            return borough
+        }
+
+        // Normalised matching for edge cases
+        let normalised = district.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // The postcodes.io API may return "Royal Borough of ..." or "London Borough of ..."
+        // prefixes in some edge cases, so strip those.
+        let stripped = normalised
+            .replacingOccurrences(of: "royal borough of ", with: "")
+            .replacingOccurrences(of: "london borough of ", with: "")
+            .trimmingCharacters(in: .whitespaces)
+
+        for borough in Borough.allCases {
+            if borough.rawValue.lowercased() == stripped {
+                return borough
+            }
+        }
+
+        // Handle specific known mismatches
+        switch stripped {
+        case "city of london":
+            return .cityOfLondon
+        default:
+            return nil
+        }
+    }
 }
 
 enum BoroughInputRequirement: String, Codable {
